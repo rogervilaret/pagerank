@@ -11,6 +11,7 @@ def main():
     if len(sys.argv) != 2:
         sys.exit("Usage: python pagerank.py corpus")
     corpus = crawl(sys.argv[1])
+    
     ranks = sample_pagerank(corpus, DAMPING, SAMPLES)
     print(f"PageRank Results from Sampling (n = {SAMPLES})")
     for page in sorted(ranks):
@@ -61,18 +62,28 @@ def transition_model(corpus, page, damping_factor):
     pages_num = len(corpus.keys())
     total_links = 0
     link_pages = set()
+    
+    #looking for the lins that are going
     for link in corpus[page]:
         total_links = total_links + 1
         link_pages.add(link)
 
     pages_probability = {}
+    
+    
+    #if not links the damping factor disapear
+    casual_damping = damping_factor
+    
+    if len(link_pages) == 0:
+        casual_damping= 0
+
     for each_page in corpus:
         probability = 0
         if each_page in link_pages:
             probability = damping_factor / total_links
         
         #adding damping_factor probability
-        probability = round(probability + (1 - damping_factor) / pages_num, 5)
+        probability = round(probability + (1 - casual_damping) / pages_num, 5)
         pages_probability.update({ each_page : probability })
     
     return pages_probability
@@ -103,7 +114,7 @@ def sample_pagerank(corpus, damping_factor, n):
     
 
     #sample starts
-    prob={}
+    
     for i in range(0, n):
         distributions.update({working_page : (distributions.get(working_page) + 1)})
         # take next probability
@@ -139,6 +150,46 @@ def iterate_pagerank(corpus, damping_factor):
     their estimated PageRank value (a value between 0 and 1). All
     PageRank values should sum to 1.
     """
+    #Inizialize the pageranks
+    probabilities = {}
+    for each_page in corpus:
+        probabilities.update({ each_page : (1 / len(corpus.keys())) })
+    
+    
+    while True:
+        check_end = 0
+        for key1 in corpus:
+            previous_probability = probabilities.get(key1)
+            
+            #recalculate probability
+            #not damping side
+            probability1 = (1 - damping_factor) / len(corpus.keys())
+            
+            probability2 = 0
+            for keylink in corpus:
+                #check if there are some link
+                if len(corpus.get(keylink)) > 0:
+                    if key1 in corpus.get(keylink):
+                        probability2 = probability2 + ( probabilities.get(keylink) / len(corpus.get(keylink)))
+                        
+                #page without links
+                else:
+                    alllinks = corpus.keys()
+                    probability2 = probability2 + ( probabilities.get(keylink) / len(alllinks))
+
+            
+            probability = probability1 + (probability2 * damping_factor)
+
+            probabilities.update({key1 : probability})
+
+            if abs(probability - previous_probability) < 0.0001:
+                check_end = check_end + 1
+            
+        if check_end == len(corpus.keys()):
+            break
+       
+
+    return probabilities
     raise NotImplementedError
 
 
